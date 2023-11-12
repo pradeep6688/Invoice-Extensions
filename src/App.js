@@ -1,42 +1,37 @@
-import {BrowserRouter, Routes, Route, Link} from "react-router-dom";
-import './App.css';
-import { Sidebar, Menu, MenuItem } from 'react-pro-sidebar';
-import Lender from "./Lender.js";
-import Invoice from "./Invoice.js";
-import Home from "./Home.js";
+// App.js
+import React from 'react';
+import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
+import Header from './header';
+import MainBanner from './MainBanner';
+import Services from './Services'; // Assume you have a Services component
+import Contact from './Contact'; // Assume you have a Contact component
+import About from './About'; // Assume you have an About component
+import BookNow from './BookNow';
+import TopBar from './TopBar'
+import Footer from './Footer';
+import './App.css'
 
 function App() {
-  return (
-    <BrowserRouter>
-        <Sidebar>
-        <Menu
-        menuItemStyles={{
-          button: {
-            // the active class will be added automatically by react router
-            // so we can use it to style the active menu item
-            [`&.active`]: {
-              backgroundColor: '#13395e',
-              color: '#b6c8d9',
-            },
-          },
-        }}
-      >
-        <MenuItem component={<Link to="/" />}> Home</MenuItem>
-        <MenuItem component={<Link to="/home/invoice" />}> Invoice</MenuItem>
-        <MenuItem component={<Link to="/home/lender" />}> Lender</MenuItem>
-      </Menu>
-      </Sidebar>
-
-      <Routes>
-          <Route path="/" element={<Home />}>
-          </Route>
-          <Route path="/home/invoice" element={<Invoice />}>
-          </Route>
-          <Route path="/home/lender" element={<Lender />}>
-          </Route>
-      </Routes>
-    </BrowserRouter>
-  );
+    return (
+        <Router>
+            <div className="app">
+                <TopBar />
+                <Header />
+                <main className="content">
+                <Routes>
+                    <Route path="/" exact component={MainBanner} />
+                    <Route path="/services" component={Services} />
+                    <Route path="/contact" component={Contact} />
+                    <Route path="/about" component={About} />
+                    <Route path="/booknow" component={BookNow} />
+                    {/* Add additional Routes here */}
+                </Routes>
+                </main>
+                <Footer />
+            </div>
+        </Router>
+    );
 }
 
 export default App;
+

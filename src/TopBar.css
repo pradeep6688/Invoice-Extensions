@@ -1,0 +1,33 @@
+/* TopBar.css */
+.top-bar {
+    background: #fff; /* Light grey background, adjust color as needed */
+    color: #333; /* Dark grey color for the text */
+    display: flex;
+    justify-content: space-between;
+    padding: 5px 20px; /* Adjust padding as needed */
+    font-size: 14px; /* Adjust font size as needed */
+}
+
+.top-bar .location,
+.top-bar .phone {
+    display: flex;
+    align-items: center;
+}
+
+.top-bar .icon {
+    margin-right: 5px; /* Adjust spacing as needed */
+    /* Replace with actual icons */
+}
+
+@media (max-width: 768px) {
+    .top-bar {
+        flex-direction: column;
+        text-align: center;
+    }
+
+    .top-bar .location,
+    .top-bar .phone {
+        justify-content: center;
+        margin-bottom: 5px;
+    }
+}
