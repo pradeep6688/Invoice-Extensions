@@ -14,6 +14,19 @@
     align-items: center;
 }
 
+.top-bar .phone a {
+    color: black;
+    font-weight: 800;
+}
+
+.location .address {
+    font-weight: 800;
+}
+
+.address a {
+    color: #333;
+}
+
 .top-bar .icon {
     margin-right: 5px; /* Adjust spacing as needed */
     /* Replace with actual icons */
