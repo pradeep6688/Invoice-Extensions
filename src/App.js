@@ -6,26 +6,25 @@ import Services from './Services'; // Assume you have a Services component
 import Contact from './Contact'; // Assume you have a Contact component
 import About from './About'; // Assume you have an About component
 import BookNow from './components/BookNow';
-import TopBar from './TopBar'
-import Footer from './Footer';
 import './App.css'
 import MainBanner from './components/MainBanner';
 
 function App() {
     return (
         <Router>
-            <div className="app">
-                <TopBar />
+            <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }} className='App'>
                 <Header />
+                <main style={{ flex: 1 }}>
                 <Routes>
+                     <Route path="/" element={<MainBanner />} />
                     <Route path="/services" element={<Services />} />
                     <Route path="/contact"  element={<Contact />} />
                     <Route path="/about" element={<About />} />
                     <Route path="/booknow"  element={<BookNow />} />
                     {/* Fallback route */}
-                    <Route path="/" element={<MainBanner />} />
+                   
                 </Routes>
-                <Footer />
+                </main>
             </div>
         </Router>
     );

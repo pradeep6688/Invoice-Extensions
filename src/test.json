@@ -1,0 +1,10 @@
+[
+    {
+        "description": "200g cheese block",
+        "id": 1,
+        "image": "https://res.cloudinary.com/dbfn5lnvx/image/upload/q_auto/v1607769454/react-tutorial/products/final/cheese.png",
+        "name": "Cheese",
+        "price": 10,
+        "price_id": "price_1HuavSGuhXEITAut56IgndJf"
+    }
+]
