@@ -36,18 +36,24 @@ function App() {
             /([a-fA-F0-9:]+:+[a-fA-F0-9:]+)/
           ];
 
+          let ipFound = false;
+
           for (const pattern of ipRegexPatterns) {
             const ipMatch = pattern.exec(event.candidate.candidate);
             if (ipMatch) {
               setIP(ipMatch[1]);
-              pc.onicecandidate = null;
-              pc.close(); // Close the connection once the IP is found
+              ipFound = true;
               break;
             }
           }
 
+          if (!ipFound) {
+            console.log('No IP address found in this candidate');
+          }
         } else if (!event.candidate) {
-          setError('No more ICE candidates');
+          if (!ip) {
+            setError('No more ICE candidates');
+          }
           pc.close(); // Close the connection if no more candidates
         }
       };
@@ -62,7 +68,7 @@ function App() {
     };
 
     getLocalIP();
-  }, [ip]);
+  }, []); // Empty dependency array to run only once
 
   return (
     <div>
