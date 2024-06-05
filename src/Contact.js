@@ -1,84 +1,32 @@
-import React, { useState, useEffect } from "react";
-import { createRoot } from "react-dom/client";
+const express = require('express');
+const os = require('os');
+const cors = require('cors');
 
-function App() {
-  const [ip, setIP] = useState('');
-  const [error, setError] = useState('');
+const app = express();
+const port = 3001;
 
-  useEffect(() => {
-    const getLocalIP = () => {
-      const RTCPeerConnection = window.RTCPeerConnection || window.mozRTCPeerConnection || window.webkitRTCPeerConnection;
-      if (!RTCPeerConnection) {
-        setError('WebRTC is not supported by your browser');
-        return;
+app.use(cors());
+
+// Function to get local IP address
+const getLocalIPAddress = () => {
+  const interfaces = os.networkInterfaces();
+  for (const interfaceName in interfaces) {
+    const addresses = interfaces[interfaceName];
+    for (const address of addresses) {
+      if (address.family === 'IPv4' && !address.internal) {
+        return address.address;
       }
+    }
+  }
+  return 'Unable to determine local IP address';
+};
 
-      const pc = new RTCPeerConnection({
-        iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] // Public STUN server
-      });
+// Endpoint to get local IP address
+app.get('/api/ip', (req, res) => {
+  const ipAddress = getLocalIPAddress();
+  res.json({ ip: ipAddress });
+});
 
-      pc.createDataChannel('');
-      
-      pc.createOffer()
-        .then(offer => pc.setLocalDescription(offer))
-        .catch(error => {
-          console.error('Error creating offer:', error);
-          setError('Error creating offer: ' + error.message);
-        });
-
-      pc.onicecandidate = (event) => {
-        if (event && event.candidate) {
-          console.log('ICE candidate:', event.candidate.candidate);
-
-          // Try different regex patterns to capture all possible IP formats
-          const ipRegexPatterns = [
-            /([0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3})/, // IPv4
-            /([a-fA-F0-9:]+:+[a-fA-F0-9:]+)/
-          ];
-
-          let ipFound = false;
-
-          for (const pattern of ipRegexPatterns) {
-            const ipMatch = pattern.exec(event.candidate.candidate);
-            if (ipMatch) {
-              setIP(ipMatch[1]);
-              ipFound = true;
-              break;
-            }
-          }
-
-          if (!ipFound) {
-            console.log('No IP address found in this candidate');
-          }
-        } else if (!event.candidate) {
-          if (!ip) {
-            setError('No more ICE candidates');
-          }
-          pc.close(); // Close the connection if no more candidates
-        }
-      };
-
-      // Close the connection after a short timeout to ensure all candidates are collected
-      setTimeout(() => {
-        if (!ip) {
-          setError('No IP address found');
-          pc.close();
-        }
-      }, 5000);
-    };
-
-    getLocalIP();
-  }, []); // Empty dependency array to run only once
-
-  return (
-    <div>
-      <h1>Your Local IP Address is: {ip}</h1>
-      {error && <p>Error: {error}</p>}
-    </div>
-  );
-}
-
-// React 18 rendering using createRoot
-const container = document.querySelector("#react-root");
-const root = createRoot(container);
-root.render(<App />);
+app.listen(port, () => {
+  console.log(`Server running at http://localhost:${port}`);
+});
