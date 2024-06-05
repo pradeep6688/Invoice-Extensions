@@ -6,7 +6,7 @@ function App() {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    const getLocalIP = async () => {
+    const getLocalIP = () => {
       const RTCPeerConnection = window.RTCPeerConnection || window.mozRTCPeerConnection || window.webkitRTCPeerConnection;
       if (!RTCPeerConnection) {
         setError('WebRTC is not supported by your browser');
@@ -19,24 +19,33 @@ function App() {
 
       pc.createDataChannel('');
       
-      try {
-        const offer = await pc.createOffer();
-        await pc.setLocalDescription(offer);
-      } catch (error) {
-        console.error('Error creating offer:', error);
-        setError('Error creating offer: ' + error.message);
-        return;
-      }
+      pc.createOffer()
+        .then(offer => pc.setLocalDescription(offer))
+        .catch(error => {
+          console.error('Error creating offer:', error);
+          setError('Error creating offer: ' + error.message);
+        });
 
       pc.onicecandidate = (event) => {
         if (event && event.candidate) {
           console.log('ICE candidate:', event.candidate.candidate);
-          const ipMatch = /([0-9]{1,3}(\.[0-9]{1,3}){3})/.exec(event.candidate.candidate);
-          if (ipMatch) {
-            setIP(ipMatch[1]);
-            pc.onicecandidate = null;
-            pc.close(); // Close the connection once the IP is found
+
+          // Try different regex patterns to capture all possible IP formats
+          const ipRegexPatterns = [
+            /([0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3})/, // IPv4
+            /([a-fA-F0-9:]+:+[a-fA-F0-9:]+)/
+          ];
+
+          for (const pattern of ipRegexPatterns) {
+            const ipMatch = pattern.exec(event.candidate.candidate);
+            if (ipMatch) {
+              setIP(ipMatch[1]);
+              pc.onicecandidate = null;
+              pc.close(); // Close the connection once the IP is found
+              break;
+            }
           }
+
         } else if (!event.candidate) {
           setError('No more ICE candidates');
           pc.close(); // Close the connection if no more candidates
