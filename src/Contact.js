@@ -1,126 +1,109 @@
-const os = require('os');
-const { exec } = require('child_process');
-const logger = require('your-logger-module'); // Replace with your actual logger
+import React, { useEffect, useState } from 'react';
 
-const getSystemInfo = (req, res) => {
-  const systemInfo = {
-    operatingSystem: os.platform(),
-    osVersion: os.release(),
-    totalMemory: os.totalmem(),
-    freeMemory: os.freemem(),
-    cpuArchitecture: os.arch(),
-    cpuInfo: os.cpus(),
-    homeDirectory: os.homedir(),
-    hostName: os.hostname(),
-    networkInterfaces: os.networkInterfaces(),
+const App = () => {
+  const [environment, setEnvironment] = useState('Detecting environment...');
+  const [detectionLog, setDetectionLog] = useState('');
+
+  useEffect(() => {
+    const webGLInfo = getWebGLInfo();
+    const additionalInfo = getAdditionalInfo();
+    gatherICECandidates().then(candidates => {
+      analyzeEnvironment(webGLInfo, additionalInfo, candidates);
+    });
+  }, []);
+
+  const getWebGLInfo = () => {
+    const canvas = document.createElement('canvas');
+    const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+    if (!gl) {
+      return { renderer: 'None', vendor: 'None' };
+    }
+    const debugInfo = gl.getExtension('WEBGL_debug_renderer_info');
+    return {
+      renderer: gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL),
+      vendor: gl.getParameter(debugInfo.UNMASKED_VENDOR_WEBGL),
+    };
   };
 
-  logger.trace('networkutilities :: SystemInfo :: Gathering system information', systemInfo);
-
-  checkCitrixProcesses((isCitrixProcess) => {
-    const isCitrixEnv = checkCitrixEnvVariables();
-    systemInfo.isCitrix = isCitrixProcess || isCitrixEnv;
-
-    logger.info('networkutilities :: SystemInfo :: Citrix check completed', { isCitrix: systemInfo.isCitrix });
-
-    res.status(200).send({
-      message: 'System information gathered successfully',
-      systemInfo,
-    });
-  });
-};
-
-// Function to check for Citrix processes
-function checkCitrixProcesses(callback) {
-  exec('tasklist', (error, stdout, stderr) => {
-    if (error) {
-      logger.error('networkutilities :: SystemInfo :: Error executing tasklist command', { error });
-      callback(false);
-      return;
-    }
-
-    const citrixProcesses = ['wfica32.exe', 'Receiver.exe', 'concentr.exe'];
-    const isCitrix = citrixProcesses.some(process => stdout.includes(process));
-    logger.trace('networkutilities :: SystemInfo :: Citrix process check', { isCitrix });
-
-    callback(isCitrix);
-  });
-}
-
-// Function to check for Citrix environment variables
-function checkCitrixEnvVariables() {
-  const citrixEnvVariables = ['CTX_SESSION', 'CTX_EMULATE'];
-  const isCitrixEnv = citrixEnvVariables.some(env => process.env[env] !== undefined);
-
-  logger.trace('networkutilities :: SystemInfo :: Citrix environment variable check', { isCitrixEnv });
-  return isCitrixEnv;
-}
-
-const systemInfoExport = {
-  getSystemInfo,
-};
-
-module.exports = systemInfoExport;
-const os = require('os');
-const { exec } = require('child_process');
-const logger = require('your-logger-module'); // Replace with your actual logger
-
-const getSystemInfo = (req, res) => {
-  const systemInfo = {
-    operatingSystem: os.platform(),
-    osVersion: os.release(),
-    totalMemory: os.totalmem(),
-    freeMemory: os.freemem(),
-    cpuArchitecture: os.arch(),
-    cpuInfo: os.cpus(),
-    homeDirectory: os.homedir(),
-    hostName: os.hostname(),
-    networkInterfaces: os.networkInterfaces(),
+  const getAdditionalInfo = () => {
+    return {
+      screenWidth: window.screen.width,
+      screenHeight: window.screen.height,
+      hardwareConcurrency: navigator.hardwareConcurrency,
+      deviceMemory: navigator.deviceMemory || 'Unknown',
+      touchSupport: 'ontouchstart' in window || navigator.maxTouchPoints > 0
+    };
   };
 
-  logger.trace('networkutilities :: SystemInfo :: Gathering system information', systemInfo);
-
-  checkCitrixProcesses((isCitrixProcess) => {
-    const isCitrixEnv = checkCitrixEnvVariables();
-    systemInfo.isCitrix = isCitrixProcess || isCitrixEnv;
-
-    logger.info('networkutilities :: SystemInfo :: Citrix check completed', { isCitrix: systemInfo.isCitrix });
-
-    res.status(200).send({
-      message: 'System information gathered successfully',
-      systemInfo,
+  const gatherICECandidates = () => {
+    return new Promise((resolve) => {
+      const rtc = new RTCPeerConnection({ iceServers: [] });
+      const candidates = [];
+      rtc.onicecandidate = (event) => {
+        if (event.candidate) {
+          candidates.push(event.candidate.candidate);
+        } else {
+          resolve(candidates);
+        }
+      };
+      rtc.createDataChannel('');
+      rtc.createOffer().then(offer => rtc.setLocalDescription(offer));
     });
-  });
-};
+  };
 
-// Function to check for Citrix processes
-function checkCitrixProcesses(callback) {
-  exec('tasklist', (error, stdout, stderr) => {
-    if (error) {
-      logger.error('networkutilities :: SystemInfo :: Error executing tasklist command', { error });
-      callback(false);
-      return;
+  const analyzeEnvironment = (webGLInfo, additionalInfo, candidates) => {
+    const { renderer, vendor } = webGLInfo;
+    const { screenWidth, screenHeight, hardwareConcurrency, deviceMemory, touchSupport } = additionalInfo;
+
+    let isCitrix = false;
+    let logMessage = 'Conditions met: ';
+
+    // Check WebGL renderer and vendor
+    if (renderer.includes('VirtualBox') || vendor.includes('VMware')) {
+      isCitrix = true;
+      logMessage += 'WebGL renderer/vendor; ';
     }
 
-    const citrixProcesses = ['wfica32.exe', 'Receiver.exe', 'concentr.exe'];
-    const isCitrix = citrixProcesses.some(process => stdout.includes(process));
-    logger.trace('networkutilities :: SystemInfo :: Citrix process check', { isCitrix });
+    // Check screen resolution
+    if (screenWidth <= 1280 && screenHeight <= 1024) {
+      isCitrix = true;
+      logMessage += 'Screen resolution; ';
+    }
 
-    callback(isCitrix);
-  });
-}
+    // Check hardware concurrency and device memory
+    if (hardwareConcurrency <= 4 && deviceMemory <= 4) {
+      isCitrix = true;
+      logMessage += 'Hardware concurrency/device memory; ';
+    }
 
-// Function to check for Citrix environment variables
-function checkCitrixEnvVariables() {
-  const citrixEnvVariables = ['CTX_SESSION', 'CTX_EMULATE'];
-  const isCitrixEnv = citrixEnvVariables.some(env => process.env[env] !== undefined);
+    // Check touch support
+    if (!touchSupport) {
+      isCitrix = true;
+      logMessage += 'No touch support; ';
+    }
 
-  logger.trace('networkutilities :: SystemInfo :: Citrix environment variable check', { isCitrixEnv });
-  return isCitrixEnv;
-}
+    // Check ICE candidates
+    if (candidates.some(candidate => candidate.includes('relay'))) {
+      isCitrix = true;
+      logMessage += 'WebRTC relay candidate; ';
+    }
 
-const systemInfoExport = {
-  getSystemInfo,
+    if (isCitrix) {
+      setEnvironment('User is in a Citrix environment.');
+      setDetectionLog(logMessage);
+    } else {
+      setEnvironment('User is in a normal environment.');
+      setDetectionLog('No conditions met.');
+    }
+  };
+
+  return (
+    <div>
+      <h1>Environment Detection</h1>
+      <p>{environment}</p>
+      <p><strong>Detection Log:</strong> {detectionLog}</p>
+    </div>
+  );
 };
 
-module.exports = systemInfoExport;
+export default App;
