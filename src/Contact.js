@@ -1,145 +1,44 @@
-//////
 {
   "query": {
     "bool": {
       "must": [
-        { "exists": { "field": "SE_number" } },
         {
-          "bool": {
-            "should": [
-              { "terms": { "issuer_deal_code": ["ss", "nn", "tt"] } },
-              { "bool": { "must_not": { "exists": { "field": "issuer_deal_code" } } } }
-            ],
-            "minimum_should_match": 1
-          }
-        },
-        { "term": { "stage": 4 } },
-        {
-          "range": {
-            "start_date": {
-              "gte": "2024-01-01",
-              "lte": "2024-12-31"
-            }
+          "exists": {
+            "field": "primary_account_number"
           }
         }
       ],
-      "must_not": [
-        { "exists": { "field": "PAN_number" } },
-        { "term": { "PAN_number": "" } }
-      ]
-    }
-  }
-}
-
-
-
-/////
-
-{
-  "query": {
-    "bool": {
-      "must": [
-        { "exists": { "field": "PAN_number" } },
-        { "exists": { "field": "SE_number" } },
+      "should": [
         {
           "bool": {
-            "should": [
-              {
-                "bool": {
-                  "must_not": [
-                    { "exists": { "field": "6" } },
-                    { "term": { "6": "" } }
-                  ]
-                }
-              },
-              {
-                "bool": {
-                  "must_not": [
-                    { "exists": { "field": "4" } },
-                    { "term": { "4": "" } }
-                  ]
-                }
+            "must_not": {
+              "exists": {
+                "field": "first_6_hashed_primary_account_number"
               }
-            ],
-            "minimum_should_match": 2
-          }
-        },
-        {
-          "bool": {
-            "should": [
-              { "terms": { "issuer_deal_code": ["ss", "nn", "tt"] } },
-              { "bool": { "must_not": { "exists": { "field": "issuer_deal_code" } } } }
-            ],
-            "minimum_should_match": 1
-          }
-        },
-        { "term": { "stage": 4 } },
-        {
-          "range": {
-            "start_date": {
-              "gte": "2024-01-01",
-              "lte": "2024-12-31"
             }
           }
-        }
-      ]
-    }
-  }
-}
-
-
-//////
-{
-  "query": {
-    "bool": {
-      "must": [
-        { "exists": { "field": "SE_number" } },
+        },
+        {
+          "term": {
+            "first_6_hashed_primary_account_number": ""
+          }
+        },
         {
           "bool": {
-            "should": [
-              {
-                "bool": {
-                  "must_not": [
-                    { "exists": { "field": "6" } },
-                    { "term": { "6": "" } }
-                  ]
-                }
-              },
-              {
-                "bool": {
-                  "must_not": [
-                    { "exists": { "field": "4" } },
-                    { "term": { "4": "" } }
-                  ]
-                }
+            "must_not": {
+              "exists": {
+                "field": "last_4_hashed_primary_account_number"
               }
-            ],
-            "minimum_should_match": 2
-          }
-        },
-        {
-          "bool": {
-            "should": [
-              { "terms": { "issuer_deal_code": ["ss", "nn", "tt"] } },
-              { "bool": { "must_not": { "exists": { "field": "issuer_deal_code" } } } }
-            ],
-            "minimum_should_match": 1
-          }
-        },
-        { "term": { "stage": 4 } },
-        {
-          "range": {
-            "start_date": {
-              "gte": "2024-01-01",
-              "lte": "2024-12-31"
             }
+          }
+        },
+        {
+          "term": {
+            "last_4_hashed_primary_account_number": ""
           }
         }
       ],
-      "must_not": [
-        { "exists": { "field": "PAN_number" } },
-        { "term": { "PAN_number": "" } }
-      ]
+      "minimum_should_match": 1
     }
   }
 }
