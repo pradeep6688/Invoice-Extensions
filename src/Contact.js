@@ -7,9 +7,7 @@
           "exists": {
             "field": "primary_account_number"
           }
-        }
-      ],
-      "filter": [
+        },
         {
           "bool": {
             "should": [
