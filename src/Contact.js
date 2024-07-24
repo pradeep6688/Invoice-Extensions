@@ -1,5 +1,6 @@
+POST /your_index_name/_search?scroll=2m
 {
-  "size": 10000,
+  "size": 1000,
   "query": {
     "bool": {
       "must": [
@@ -10,10 +11,14 @@
         },
         {
           "bool": {
-            "must_not": [
+            "should": [
               {
-                "exists": {
-                  "field": "first_6_hashed_primary_account_number"
+                "bool": {
+                  "must_not": {
+                    "exists": {
+                      "field": "first_6_hashed_primary_account_number"
+                    }
+                  }
                 }
               },
               {
@@ -21,15 +26,20 @@
                   "first_6_hashed_primary_account_number": ""
                 }
               }
-            ]
+            ],
+            "minimum_should_match": 1
           }
         },
         {
           "bool": {
-            "must_not": [
+            "should": [
               {
-                "exists": {
-                  "field": "last_4_hashed_primary_account_number"
+                "bool": {
+                  "must_not": {
+                    "exists": {
+                      "field": "last_4_hashed_primary_account_number"
+                    }
+                  }
                 }
               },
               {
@@ -37,7 +47,8 @@
                   "last_4_hashed_primary_account_number": ""
                 }
               }
-            ]
+            ],
+            "minimum_should_match": 1
           }
         }
       ]
