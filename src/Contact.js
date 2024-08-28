@@ -30,18 +30,23 @@ fs.readdir(dir, (err, files) => {
       return;
     }
 
+    // Automatically detect and split regex patterns that start with `^`
+    const transformedCode = code.replace(/\/\^([^\n\r]+?)\/[gimsuy]*/g, (match, p1) => {
+      // Split the regex into parts and concatenate them
+      const splitPattern = p1.split('').map(char => `"${char}"`).join(' + ');
+      return `new RegExp(${splitPattern}, '${match.split('/')[2]}')`;
+    });
+
     try {
-      // Use Terser to minify and obfuscate the code
-      const result = await minify(code, {
+      // Use Terser to minify and obfuscate the transformed code
+      const result = await minify(transformedCode, {
         mangle: {
           toplevel: true,  // Mangle top-level variable and function names
-          properties: {
-            regex: /^_/,  // Optional: Mangle property names that start with an underscore
-          },
         },
         compress: {
           drop_console: true,  // Remove console logs
           drop_debugger: true, // Remove debugger statements
+          passes: 3,           // Perform multiple passes for better compression
         },
         output: {
           comments: false,  // Remove all comments
