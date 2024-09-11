@@ -1,68 +1,153 @@
-const fs = require('fs');
-const path = require('path');
-const { minify } = require('terser');
+import React, { useReducer, useCallback } from 'react';
+import { Button, TextInput, Table, Panel } from '@wf/ria'; 
+import { useSelector, useDispatch } from 'react-redux'; 
+import { getContractDetails, updateUserEmailContact } from '../actions/internalManagement'; 
+import { FormattedMessage, useIntl } from 'react-intl';
 
-// Define the directory and file pattern to look for
-const dir = 'build/static/js/';
-const filePattern = /^main\..*\.chunk\.js$/;
+// Define initial state
+const initialState = {
+    inputValue: '',
+    showTable: false,
+    isPanelOpen: false,
+    emailValue: '',
+    isEmailValid: false,
+};
 
-// Read the directory and find the file that matches the pattern
-fs.readdir(dir, (err, files) => {
-  if (err) {
-    console.error('Error reading directory:', err);
-    return;
-  }
-
-  const mainChunkFile = files.find(file => filePattern.test(file));
-
-  if (!mainChunkFile) {
-    console.error('No main chunk file found matching the pattern.');
-    return;
-  }
-
-  const inputFilePath = path.join(dir, mainChunkFile);
-  const outputFilePath = path.join(dir, mainChunkFile.replace('.js', '.min.js'));
-
-  // Read the contents of the found JavaScript file
-  fs.readFile(inputFilePath, 'utf8', async (err, code) => {
-    if (err) {
-      console.error('Error reading input file:', err);
-      return;
+// Reducer for handling the state changes
+const reducer = (state, action) => {
+    switch (action.type) {
+        case 'SET_INPUT_VALUE':
+            return { ...state, inputValue: action.payload };
+        case 'SET_EMAIL_VALUE':
+            return { ...state, emailValue: action.payload };
+        case 'TOGGLE_SHOW_TABLE':
+            return { ...state, showTable: action.payload };
+        case 'TOGGLE_PANEL':
+            return { ...state, isPanelOpen: action.payload };
+        case 'SET_EMAIL_VALIDITY':
+            return { ...state, isEmailValid: action.payload };
+        default:
+            return state;
     }
+};
 
-    // Automatically detect and split regex patterns that start with `^`
-    const transformedCode = code.replace(/\/\^([^\n\r]+?)\/[gimsuy]*/g, (match, p1) => {
-      // Split the regex into parts and concatenate them
-      const splitPattern = p1.split('').map(char => `"${char}"`).join(' + ');
-      return `new RegExp(${splitPattern}, '${match.split('/')[2]}')`;
-    });
+export function UpdateUser() {
+    const [state, dispatchLocal] = useReducer(reducer, initialState); // Using useReducer
+    const dispatch = useDispatch();
+    const { formatMessage } = useIntl();
 
-    try {
-      // Use Terser to minify and obfuscate the transformed code
-      const result = await minify(transformedCode, {
-        mangle: {
-          toplevel: true,  // Mangle top-level variable and function names
-        },
-        compress: {
-          drop_console: true,  // Remove console logs
-          drop_debugger: true, // Remove debugger statements
-          passes: 3,           // Perform multiple passes for better compression
-        },
-        output: {
-          comments: false,  // Remove all comments
-        },
-      });
+    const emailCheckValidator = useCallback((value) => {
+        const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+        return emailRegex.test(value);
+    }, []);
 
-      // Write the minified and obfuscated code to a new file
-      fs.writeFile(outputFilePath, result.code, 'utf8', (err) => {
-        if (err) {
-          console.error('Error writing output file:', err);
-          return;
+    const handleOnChange = useCallback((value) => {
+        dispatchLocal({ type: 'SET_INPUT_VALUE', payload: value });
+    }, []);
+
+    const handleOnEmailChange = useCallback((value) => {
+        dispatchLocal({ type: 'SET_EMAIL_VALUE', payload: value });
+        const isValid = emailCheckValidator(value);
+        dispatchLocal({ type: 'SET_EMAIL_VALIDITY', payload: isValid });
+    }, [emailCheckValidator]);
+
+    const handleOnSubmit = async (e) => {
+        e.preventDefault();
+        try {
+            await dispatch(getContractDetails(state.inputValue)); // Dispatch API call
+            dispatchLocal({ type: 'TOGGLE_SHOW_TABLE', payload: true });
+        } catch (error) {
+            console.error('Error fetching contract details:', error);
+            // Handle error, perhaps show a notification or alert
         }
-        console.log(`Minification and obfuscation complete: ${outputFilePath}`);
-      });
-    } catch (err) {
-      console.error('Error during minification:', err);
-    }
-  });
-});
+    };
+
+    const onSaveEmail = async () => {
+        try {
+            await dispatch(updateUserEmailContact(state.emailValue)); // Dispatch API call
+            dispatchLocal({ type: 'TOGGLE_PANEL', payload: false });
+        } catch (error) {
+            console.error('Error saving email:', error);
+            // Handle error, perhaps show a notification or alert
+        }
+    };
+
+    const handleEditClick = useCallback(() => {
+        dispatchLocal({ type: 'TOGGLE_PANEL', payload: true });
+    }, []);
+
+    return (
+        <div className="UpdateUserPage">
+            <h1><FormattedMessage id="js.user.contract.title" /></h1>
+            
+            {/* Edit Email Panel */}
+            <Panel 
+                onClose={() => dispatchLocal({ type: 'TOGGLE_PANEL', payload: false })} 
+                isOpen={state.isPanelOpen} 
+                title="Edit Email" 
+            >
+                <TextInput 
+                    name="email"
+                    label="Email" 
+                    value={state.emailValue} 
+                    onValueChange={handleOnEmailChange} 
+                    customValidators={[emailCheckValidator]} 
+                />
+                <Button kind="standard" label="Save" onClick={onSaveEmail} disabled={!state.isEmailValid} />
+            </Panel>
+
+            {/* Contract Search Form */}
+            <form onSubmit={handleOnSubmit}>
+                <TextInput
+                    name="contract"
+                    label="Contract ID"
+                    value={state.inputValue}
+                    onValueChange={handleOnChange}
+                />
+                <Button type="submit" label="Search" kind="primary" />
+            </form>
+
+            {/* Results Table */}
+            {state.showTable && (
+                <div className="ContractHeader">
+                    <h2><FormattedMessage id="js.app.title.search.results" /></h2>
+                    <TableComponent handleEditClick={handleEditClick} />
+                </div>
+            )}
+        </div>
+    );
+}
+
+// Table Component 
+function TableComponent({ handleEditClick }) {
+    const data = [
+        { customer: '12345', contract: '11212121' },
+        { customer: '1212121', contract: '42423232323' }
+    ];
+
+    return (
+        <Table
+            columns={[
+                { key: 'customer', label: 'Customer' },
+                { key: 'contract', label: 'Contract' },
+                {
+                    key: 'action',
+                    label: 'Action',
+                    emptyValue: item => (
+                        <Button
+                            kind="standard"
+                            className="FeedbackButton"
+                            slim
+                            aria-label={`Edit contract for ${item.customer}`}
+                            onClick={handleEditClick}
+                        >
+                            Edit
+                        </Button>
+                    )
+                }
+            ]}
+            data={data}
+            rowKey="customer"
+        />
+    );
+}
