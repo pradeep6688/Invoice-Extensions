@@ -151,3 +151,118 @@ function TableComponent({ handleEditClick }) {
         />
     );
 }
+// UpdateUser.test.js
+import React from 'react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { Provider } from 'react-redux';
+import configureStore from 'redux-mock-store';
+import UpdateUser from './UpdateUser';
+import { getContractDetails, updateUserEmailContact } from '../actions/internalManagement';
+import { IntlProvider } from 'react-intl';
+
+jest.mock('../actions/internalManagement', () => ({
+  getContractDetails: jest.fn(),
+  updateUserEmailContact: jest.fn(),
+}));
+
+const mockStore = configureStore([]);
+const initialState = {
+  internalManagement: {
+    userDetails: [],
+    statusResponse: 'Success',
+  },
+};
+
+const renderComponent = (store) => {
+  return render(
+    <Provider store={store}>
+      <IntlProvider locale="en" messages={{}}>
+        <UpdateUser />
+      </IntlProvider>
+    </Provider>
+  );
+};
+
+describe('UpdateUser Component', () => {
+  let store;
+
+  beforeEach(() => {
+    store = mockStore(initialState);
+  });
+
+  test('renders without crashing', () => {
+    renderComponent(store);
+
+    expect(screen.getByText(/Update Contract/)).toBeInTheDocument();
+  });
+
+  test('updates the input value when typing', () => {
+    renderComponent(store);
+
+    const inputField = screen.getByLabelText(/Search/);
+    fireEvent.change(inputField, { target: { value: 'test123' } });
+
+    expect(inputField.value).toBe('test123');
+  });
+
+  test('calls getContractDetails on search click', async () => {
+    renderComponent(store);
+
+    const inputField = screen.getByLabelText(/Search/);
+    fireEvent.change(inputField, { target: { value: 'test123' } });
+
+    const searchButton = screen.getByText(/Search/);
+    fireEvent.click(searchButton);
+
+    await waitFor(() => {
+      expect(getContractDetails).toHaveBeenCalledWith('test123');
+    });
+  });
+
+  test('shows validation error for invalid email', () => {
+    renderComponent(store);
+
+    const emailField = screen.getByLabelText(/Update Contract/);
+    fireEvent.change(emailField, { target: { value: 'invalidemail' } });
+
+    const saveButton = screen.getByText(/Save/);
+    expect(saveButton).toBeDisabled();
+  });
+
+  test('enables save button for valid email', () => {
+    renderComponent(store);
+
+    const emailField = screen.getByLabelText(/Update Contract/);
+    fireEvent.change(emailField, { target: { value: 'test@example.com' } });
+
+    const saveButton = screen.getByText(/Save/);
+    expect(saveButton).not.toBeDisabled();
+  });
+
+  test('dispatches updateUserEmailContact on save', async () => {
+    renderComponent(store);
+
+    // Fill out the email field
+    const emailField = screen.getByLabelText(/Update Contract/);
+    fireEvent.change(emailField, { target: { value: 'test@example.com' } });
+
+    const saveButton = screen.getByText(/Save/);
+    fireEvent.click(saveButton);
+
+    await waitFor(() => {
+      expect(updateUserEmailContact).toHaveBeenCalled();
+    });
+  });
+
+  test('clears the form when clear button is clicked', () => {
+    renderComponent(store);
+
+    const inputField = screen.getByLabelText(/Search/);
+    fireEvent.change(inputField, { target: { value: 'test123' } });
+
+    const clearButton = screen.getByText(/Clear/);
+    fireEvent.click(clearButton);
+
+    expect(inputField.value).toBe('');
+  });
+});
